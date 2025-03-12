@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:rick_and_morty/data/repasitory/api_services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rick_and_morty/presentation/pages/search_page.dart';
 import 'package:rick_and_morty/presentation/widgets/character_card.dart';
 
-import '../../data/models/rick_models.dart';
 import '../../data/repasitory/selected_services.dart';
+import '../bloc/character_bloc.dart';
 
 class CharacterPage extends StatefulWidget {
   const CharacterPage({super.key});
@@ -13,16 +13,13 @@ class CharacterPage extends StatefulWidget {
   State<CharacterPage> createState() => _CharacterPageState();
 }
 
-late Future<CharacterResponse> futureCharacter;
-
 class _CharacterPageState extends State<CharacterPage> {
-  ApiServices apiServices = ApiServices();
   final selectedServices = SelectedServices();
 
   @override
   void initState() {
-    futureCharacter = apiServices.getCharacterResponse();
     super.initState();
+    context.read<CharacterBloc>().add(LoadCharacters());
   }
 
   @override
@@ -39,33 +36,31 @@ class _CharacterPageState extends State<CharacterPage> {
                 builder: (context) => const SearchPage(),
               );
             },
-            icon: const Icon(
-              Icons.search,
-            ),
+            icon: const Icon(Icons.search),
           )
         ],
       ),
-      body: FutureBuilder<CharacterResponse>(
-        future: futureCharacter,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: BlocBuilder<CharacterBloc, CharacterState>(
+        builder: (context, state) {
+          if (state is CharacterLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            var data = snapshot.data!.results;
+          } else if (state is CharacterLoaded) {
+            final characters =
+                state.data.expand((response) => response.results).toList();
+
             return ListView.builder(
-              itemCount: data.length,
+              itemCount: state.data.length,
               itemBuilder: (context, index) {
                 return CharacterCard(
-                  character: data[index],
+                  character: characters[index],
                   selectedServices: selectedServices,
                 );
               },
             );
-          } else {
-            return const Center(child: Text('No data'));
+          } else if (state is CharacterError) {
+            return Center(child: Text(state.error));
           }
+          return const Center(child: Text('No data available'));
         },
       ),
     );

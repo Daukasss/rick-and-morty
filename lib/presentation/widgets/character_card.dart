@@ -13,7 +13,9 @@ class CharacterCard extends StatefulWidget {
   });
   @override
   // ignore: library_private_types_in_public_api
-  _CharacterCardState createState() => _CharacterCardState();
+  _CharacterCardState createState() {
+    return _CharacterCardState();
+  }
 }
 
 class _CharacterCardState extends State<CharacterCard> {

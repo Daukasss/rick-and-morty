@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
-import '../../data/models/rick_models.dart';
-import '../../data/repasitory/api_services.dart';
-import '../../data/repasitory/selected_services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/character_bloc.dart';
 import '../widgets/character_card.dart';
 
 class SearchPage extends StatefulWidget {
@@ -13,14 +11,10 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final selectedServices = SelectedServices();
-  final ApiServices _apiServices = ApiServices();
-  Future<CharacterResponse>? _futureCharacters;
   final TextEditingController _searchController = TextEditingController();
-  void _fetchCharacters([String query = ""]) {
-    setState(() {
-      _futureCharacters = _apiServices.getCharacterResponse(query: query);
-    });
+
+  void _fetchCharacters(String query) {
+    context.read<CharacterBloc>().add(SearchCharacters(query));
   }
 
   @override
@@ -43,32 +37,32 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                   prefixIcon: const Icon(Icons.search),
                 ),
-                onChanged: (query) => _fetchCharacters(query),
+                onChanged: _fetchCharacters,
               ),
             ),
             Expanded(
-              child: FutureBuilder<CharacterResponse>(
-                future: _futureCharacters,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+              child: BlocBuilder<CharacterBloc, CharacterState>(
+                builder: (context, state) {
+                  if (state is CharacterLoading) {
                     return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('misstakr: ${snapshot.error}'));
-                  } else if (!snapshot.hasData ||
-                      snapshot.data!.results.isEmpty) {
-                    return const Center(child: Text("Not found"));
+                  } else if (state is CharacterLoaded) {
+                    final characters = state.data
+                        .expand((response) => response.results)
+                        .toList();
+                    return ListView.builder(
+                      controller: scrollController,
+                      itemCount: characters.length,
+                      itemBuilder: (context, index) {
+                        return CharacterCard(
+                          selectedServices: context.read(),
+                          character: characters[index],
+                        );
+                      },
+                    );
+                  } else if (state is CharacterError) {
+                    return Center(child: Text(state.error));
                   }
-                  final characters = snapshot.data!.results;
-                  return ListView.builder(
-                    controller: scrollController,
-                    itemCount: characters.length,
-                    itemBuilder: (context, index) {
-                      return CharacterCard(
-                        character: characters[index],
-                        selectedServices: selectedServices,
-                      );
-                    },
-                  );
+                  return const Center(child: Text('No data available'));
                 },
               ),
             ),

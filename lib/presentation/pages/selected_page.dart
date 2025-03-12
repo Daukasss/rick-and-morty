@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../config/bloc/cubit/theme_cubit.dart';
 import '../../data/repasitory/selected_services.dart';
 
 class SelectedPage extends StatefulWidget {
@@ -15,9 +17,22 @@ class _SelectedPageState extends State<SelectedPage> {
   @override
   Widget build(BuildContext context) {
     final favorites = _favoriteService.getFavorites();
+    final isDark = context.watch<ThemeCubit>().state.isDark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Selected person')),
+      appBar: AppBar(
+        title: const Text('Selected person'),
+        actions: [
+          Switch(
+            value: isDark,
+            onChanged: (value) {
+              _setTheme(context, value);
+            },
+            focusColor: Colors.grey,
+            activeColor: const Color.fromARGB(255, 0, 205, 7),
+          )
+        ],
+      ),
       body: favorites.isEmpty
           ? const Center(child: Text("NOt selected person"))
           : ListView.builder(
@@ -51,5 +66,11 @@ class _SelectedPageState extends State<SelectedPage> {
               },
             ),
     );
+  }
+
+  void _setTheme(BuildContext context, bool value) {
+    context
+        .read<ThemeCubit>()
+        .setTheme(value ? Brightness.dark : Brightness.light);
   }
 }
